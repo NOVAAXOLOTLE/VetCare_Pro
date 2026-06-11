@@ -1,0 +1,24 @@
+[
+  {
+    "id": "g-1",
+    "title": "Triage Basics",
+    "category": "Clinical",
+    "content": "Assess airway, breathing, circulation, and pain before any procedure.",
+    "assetPath": "guides/triage.json"
+  },
+  {
+    "id": "g-2",
+    "title": "Vaccination Flow",
+    "category": "Preventive Care",
+    "content": "Verify next dose date, lot number, and laboratory before application.",
+    "assetPath": "guides/vaccination.json"
+  },
+  {
+    "id": "g-3",
+    "title": "Post Surgery Care",
+    "category": "Surgery",
+    "content": "Monitor temperature, pain level, wound condition, and appetite after surgery.",
+    "assetPath": "guides/post_surgery.json"
+  }
+]
+

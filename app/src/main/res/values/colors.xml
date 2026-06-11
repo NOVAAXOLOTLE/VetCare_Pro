@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vetcare_primary">#007B7F</color>
+    <color name="vetcare_primary_dark">#005B5E</color>
+    <color name="vetcare_accent">#E64A19</color>
+    <color name="vetcare_success">#2E7D32</color>
+    <color name="vetcare_warning">#F9A825</color>
+    <color name="vetcare_background">#F4F7F7</color>
+    <color name="vetcare_text">#444444</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
