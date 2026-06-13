@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 class LocalVetCareStore(private val appContext: Context) {
@@ -56,202 +55,19 @@ class LocalVetCareStore(private val appContext: Context) {
     )
     val users: StateFlow<List<AppUser>> = _users.asStateFlow()
 
-    private val _owners = MutableStateFlow(
-        listOf(
-            Owner(id = "o-1", fullName = "Javier Ruiz", email = "owner@vetcare.pro", phone = "+58 412 555 1212", address = "Av. Central 123", documentId = "V-12345678"),
-            Owner(id = "o-2", fullName = "María López", email = "maria@correo.com", phone = "+58 414 555 9988", address = "Calle 9 #45", documentId = "V-87654321"),
-            Owner(id = "o-3", fullName = "Pedro García", email = "pedro@correo.com", phone = "+58 424 555 7777", address = "Urbanización Las Palmas", documentId = "V-99887766")
-        )
-    )
+    private val _owners = MutableStateFlow<List<Owner>>(emptyList())
     val owners: StateFlow<List<Owner>> = _owners.asStateFlow()
 
-    private val _pets = MutableStateFlow(
-        listOf(
-            Pet(
-                id = "p-1",
-                name = "Luna",
-                species = "Canina",
-                breed = "Labrador",
-                birthDate = LocalDate.now().minusYears(4),
-                weight = 24.5,
-                coatColor = "Miel",
-                microchipNumber = "MC-1001",
-                photoUrl = "https://images.unsplash.com/photo-1548199973-03cce0bbc87b",
-                ownerId = "o-1",
-                ownerName = "Javier Ruiz",
-                qrCode = "PET-p-1",
-                vaccinated = true,
-                lastConsultationDate = LocalDate.now().minusDays(12),
-                serviceType = "Laboratory"
-            ),
-            Pet(
-                id = "p-2",
-                name = "Milo",
-                species = "Felina",
-                breed = "Maine Coon",
-                birthDate = LocalDate.now().minusYears(2),
-                weight = 6.2,
-                coatColor = "Gris",
-                microchipNumber = "MC-1002",
-                photoUrl = "https://images.unsplash.com/photo-1519052537078-e6302a4968d4",
-                ownerId = "o-2",
-                ownerName = "María López",
-                qrCode = "PET-p-2",
-                vaccinated = false,
-                lastConsultationDate = LocalDate.now().minusMonths(2),
-                serviceType = "Dental"
-            ),
-            Pet(
-                id = "p-3",
-                name = "Kira",
-                species = "Canina",
-                breed = "Poodle",
-                birthDate = LocalDate.now().minusYears(6),
-                weight = 9.1,
-                coatColor = "Blanco",
-                microchipNumber = "MC-1003",
-                photoUrl = "https://images.unsplash.com/photo-1601758123927-19890f6a0de3",
-                ownerId = "o-3",
-                ownerName = "Pedro García",
-                qrCode = "PET-p-3",
-                vaccinated = true,
-                lastConsultationDate = LocalDate.now().minusDays(4),
-                serviceType = "Surgery"
-            )
-        )
-    )
+    private val _pets = MutableStateFlow<List<Pet>>(emptyList())
     val pets: StateFlow<List<Pet>> = _pets.asStateFlow()
 
-    private val _appointments = MutableStateFlow(
-        listOf(
-            Appointment(
-                id = "a-1",
-                petId = "p-1",
-                ownerId = "o-1",
-                branchId = "b-1",
-                dateTime = LocalDateTime.now().plusHours(26),
-                status = AppointmentStatus.CONFIRMED,
-                reason = "Control general",
-                notes = "Llegar 10 min antes",
-                serviceType = "Consultation",
-                reminder24hSent = false,
-                reminder2hSent = false
-            ),
-            Appointment(
-                id = "a-2",
-                petId = "p-2",
-                ownerId = "o-2",
-                branchId = "b-2",
-                dateTime = LocalDateTime.now().plusHours(3),
-                status = AppointmentStatus.PENDING,
-                reason = "Vacunación",
-                notes = "Traer cartilla",
-                serviceType = "Vaccination",
-                reminder24hSent = false,
-                reminder2hSent = false
-            ),
-            Appointment(
-                id = "a-3",
-                petId = "p-3",
-                ownerId = "o-3",
-                branchId = "b-1",
-                dateTime = LocalDateTime.now().minusHours(2),
-                status = AppointmentStatus.COMPLETED,
-                reason = "Cirugía menor",
-                notes = "Recuperación favorable",
-                serviceType = "Surgery",
-                reminder24hSent = true,
-                reminder2hSent = true
-            )
-        )
-    )
+    private val _appointments = MutableStateFlow<List<Appointment>>(emptyList())
     val appointments: StateFlow<List<Appointment>> = _appointments.asStateFlow()
 
-    private val _medicalRecords = MutableStateFlow(
-        listOf(
-            MedicalRecord(
-                id = "m-1",
-                petId = "p-1",
-                veterinarianId = "u-vet",
-                veterinarianName = "Dra. Ana Torres",
-                diagnosis = "Otitis externa",
-                treatment = "Limpieza y gotas antibióticas",
-                notes = "Control en 7 días",
-                temperature = 38.6,
-                weight = 24.4,
-                images = listOf("https://images.unsplash.com/photo-1517841905240-472988babdf9"),
-                consultationDate = LocalDateTime.now().minusDays(12),
-                prescriptionApproved = true,
-                prescriptionSent = true
-            ),
-            MedicalRecord(
-                id = "m-2",
-                petId = "p-2",
-                veterinarianId = "u-vet",
-                veterinarianName = "Dra. Ana Torres",
-                diagnosis = "Profilaxis dental",
-                treatment = "Limpieza dental y pulido",
-                notes = "Evitar alimento duro 48h",
-                temperature = 38.3,
-                weight = 6.1,
-                images = listOf(),
-                consultationDate = LocalDateTime.now().minusMonths(2),
-                prescriptionApproved = false,
-                prescriptionSent = false
-            ),
-            MedicalRecord(
-                id = "m-3",
-                petId = "p-3",
-                veterinarianId = "u-vet",
-                veterinarianName = "Dra. Ana Torres",
-                diagnosis = "Recuperación post quirúrgica",
-                treatment = "Antiinflamatorio y reposo",
-                notes = "Sin complicaciones",
-                temperature = 38.2,
-                weight = 9.0,
-                images = listOf(),
-                consultationDate = LocalDateTime.now().minusDays(4),
-                prescriptionApproved = true,
-                prescriptionSent = false
-            )
-        )
-    )
+    private val _medicalRecords = MutableStateFlow<List<MedicalRecord>>(emptyList())
     val medicalRecords: StateFlow<List<MedicalRecord>> = _medicalRecords.asStateFlow()
 
-    private val _vaccines = MutableStateFlow(
-        listOf(
-            VaccineRecord(
-                id = "v-1",
-                petId = "p-1",
-                vaccineName = "Rabia",
-                laboratory = "VetLab",
-                lot = "RB-221",
-                applicationDate = LocalDate.now().minusMonths(11),
-                nextDoseDate = LocalDate.now().plusDays(10),
-                notes = "Refuerzo anual"
-            ),
-            VaccineRecord(
-                id = "v-2",
-                petId = "p-2",
-                vaccineName = "Trivalente",
-                laboratory = "BioPet",
-                lot = "TV-442",
-                applicationDate = LocalDate.now().minusMonths(14),
-                nextDoseDate = LocalDate.now().minusDays(3),
-                notes = "Refuerzo vencido"
-            ),
-            VaccineRecord(
-                id = "v-3",
-                petId = "p-3",
-                vaccineName = "Leptospirosis",
-                laboratory = "VetLab",
-                lot = "LP-780",
-                applicationDate = LocalDate.now().minusMonths(7),
-                nextDoseDate = LocalDate.now().plusMonths(4),
-                notes = "Completar esquema"
-            )
-        )
-    )
+    private val _vaccines = MutableStateFlow<List<VaccineRecord>>(emptyList())
     val vaccines: StateFlow<List<VaccineRecord>> = _vaccines.asStateFlow()
 
     private val _branches = MutableStateFlow(
@@ -307,12 +123,7 @@ class LocalVetCareStore(private val appContext: Context) {
     )
     val mediaCatalog: StateFlow<List<MultimediaItem>> = _mediaCatalog.asStateFlow()
 
-    private val _notifications = MutableStateFlow(
-        listOf(
-            AppNotification(id = "n-1", title = "Appointment reminder", message = "Luna tiene cita en 24 horas", type = NotificationType.APPOINTMENT_REMINDER, actionable = true, targetRoute = "appointments"),
-            AppNotification(id = "n-2", title = "Vaccine reminder", message = "Milo vence en 7 días", type = NotificationType.VACCINE_REMINDER, actionable = true, targetRoute = "vaccinations")
-        )
-    )
+    private val _notifications = MutableStateFlow<List<AppNotification>>(emptyList())
     val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
     private val _offlineGuides = MutableStateFlow<List<OfflineGuide>>(emptyList())
@@ -332,8 +143,16 @@ class LocalVetCareStore(private val appContext: Context) {
         require(sampleCredentials[normalized] == password) { "Invalid credentials" }
         val user = _users.value.firstOrNull { it.email.equals(normalized, ignoreCase = true) }
             ?: error("User not found")
-        _session.value = SessionState(isLoading = false, isAuthenticated = true, user = user, error = null)
+        setSession(user)
         user
+    }
+
+    fun setSession(user: AppUser?) {
+        _session.value = if (user != null) {
+            SessionState(isLoading = false, isAuthenticated = true, user = user, error = null)
+        } else {
+            SessionState()
+        }
     }
 
     suspend fun forgotPassword(email: String): Result<Unit> = runCatching {
@@ -343,6 +162,14 @@ class LocalVetCareStore(private val appContext: Context) {
 
     suspend fun logout() {
         _session.value = SessionState()
+    }
+
+    suspend fun saveOwner(owner: Owner): Result<Owner> = runCatching {
+        _owners.update { items ->
+            val cleaned = items.filterNot { it.id == owner.id }
+            cleaned + owner
+        }
+        owner
     }
 
     suspend fun savePet(pet: Pet, photoBytes: ByteArray?): Result<Pet> = runCatching {
@@ -543,4 +370,3 @@ class LocalVetCareStore(private val appContext: Context) {
         )
     }
 }
-

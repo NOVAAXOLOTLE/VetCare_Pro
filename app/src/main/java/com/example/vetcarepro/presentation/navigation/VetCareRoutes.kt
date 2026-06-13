@@ -4,6 +4,7 @@ object VetCareRoutes {
     const val Login = "login"
     const val Dashboard = "dashboard"
     const val PetRegistration = "pet_registration"
+    const val OwnerRegistration = "owner_registration"
     const val Scanner = "scanner"
     const val Appointments = "appointments"
     const val MedicalHistory = "medical_history"

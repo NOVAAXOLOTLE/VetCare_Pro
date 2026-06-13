@@ -29,6 +29,7 @@ import com.example.vetcarepro.domain.model.ServiceItem
 import com.example.vetcarepro.domain.model.UserRole
 import com.example.vetcarepro.domain.model.VaccineRecord
 import com.example.vetcarepro.domain.repository.VetCareRepository
+import com.example.vetcarepro.data.messaging.VetCareNotificationHelper
 import com.google.android.gms.tasks.Task
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
@@ -112,7 +113,7 @@ class FirebaseVetCareRepository @Inject constructor(
             // Map Firebase User to AppUser. Try to fetch from Firestore first.
             val email = firebaseUser.email.orEmpty()
             
-            val userDoc = firestore?.collection("users")?.document(firebaseUser.uid)?.get()?.await()
+            val userDoc = runCatching { firestore?.collection("users")?.document(firebaseUser.uid)?.get()?.await() }.getOrNull()
             val appUser = if (userDoc?.exists() == true) {
                 userDoc.data.orEmpty().toAppUser()
             } else {
@@ -121,11 +122,23 @@ class FirebaseVetCareRepository @Inject constructor(
                     id = firebaseUser.uid,
                     email = email,
                     fullName = firebaseUser.displayName ?: "Google User",
-                    role = UserRole.PROPIETARIO // Default role for social login
+                    role = UserRole.PROPIETARIO
                 )
             }
             
             persistSession(appUser)
+            localStore.setSession(appUser) // Explicitly update local store session
+            
+            // Auto-register as Owner if Propietario
+            if (appUser.role == UserRole.PROPIETARIO) {
+                saveOwner(Owner(
+                    id = appUser.id,
+                    fullName = appUser.fullName,
+                    email = appUser.email,
+                    phone = ""
+                ))
+            }
+
             appUser
         }
     }
@@ -144,6 +157,14 @@ class FirebaseVetCareRepository @Inject constructor(
         localStore.logout()
         context.vetcareSessionStore.edit { it.clear() }
         auth?.signOut()
+    }
+
+    override suspend fun saveOwner(owner: Owner): Result<Owner> {
+        val saved = localStore.saveOwner(owner)
+        if (saved.isSuccess) {
+            syncDocument("owners", owner.id, owner.toFirestore())
+        }
+        return saved
     }
 
     override suspend fun savePet(pet: Pet, photoBytes: ByteArray?): Result<Pet> {
@@ -201,6 +222,14 @@ class FirebaseVetCareRepository @Inject constructor(
     override suspend fun refreshReminders() {
         localStore.refreshReminders()
         localStore.notifications.value.forEach { notification ->
+            if (!notification.isRead) {
+                VetCareNotificationHelper.showActionableNotification(
+                    context,
+                    notification.title,
+                    notification.message,
+                    notification.targetRoute
+                )
+            }
             syncDocument("notifications", notification.id, notification.toFirestore())
         }
     }

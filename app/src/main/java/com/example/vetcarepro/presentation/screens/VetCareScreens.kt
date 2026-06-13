@@ -1,20 +1,19 @@
 package com.example.vetcarepro.presentation.screens
 
 import android.content.Intent
+import android.util.Log
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,26 +22,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SegmentedButtonDefaults.colors
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -62,13 +53,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -78,23 +70,21 @@ import com.example.vetcarepro.domain.model.MapMode
 import com.example.vetcarepro.domain.model.MediaCategory
 import com.example.vetcarepro.domain.model.MedicalRecord
 import com.example.vetcarepro.domain.model.MultimediaItem
-import com.example.vetcarepro.domain.model.NotificationType
+import com.example.vetcarepro.domain.model.Owner
 import com.example.vetcarepro.domain.model.Pet
-import com.example.vetcarepro.domain.model.UserRole
 import com.example.vetcarepro.domain.model.VaccineRecord
 import com.example.vetcarepro.domain.model.VaccinationStatus
 import com.example.vetcarepro.domain.model.displayQrCode
 import com.example.vetcarepro.domain.model.formattedDateTime
 import com.example.vetcarepro.domain.model.status
 import com.example.vetcarepro.presentation.components.ErrorState
-import com.example.vetcarepro.presentation.components.LoadingState
 import com.example.vetcarepro.presentation.components.ScreenHeader
-import com.example.vetcarepro.presentation.components.SmallInfoPill
 import com.example.vetcarepro.presentation.components.SummaryCard
 import com.example.vetcarepro.presentation.components.VetCareButton
 import com.example.vetcarepro.presentation.components.VetCareFilterChip
+import com.example.vetcarepro.presentation.components.VetCareExposedDropdown
+import com.example.vetcarepro.presentation.components.VetCareImagePicker
 import com.example.vetcarepro.presentation.components.VetCareTextField
-import com.example.vetcarepro.presentation.viewmodels.AuthUiState
 import com.example.vetcarepro.presentation.viewmodels.AuthViewModel
 import com.example.vetcarepro.presentation.viewmodels.VetCareViewModel
 import com.google.android.gms.maps.model.CameraPosition
@@ -110,7 +100,6 @@ import com.journeyapps.barcodescanner.ScanOptions
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,19 +111,33 @@ fun LoginScreen(
     val session by authViewModel.session.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    val gso = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(com.example.vetcarepro.R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+    }
+    val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
+
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
+        Log.d("LoginScreen", "Google Sign-In result code: ${result.resultCode}")
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)
             val idToken: String? = account?.idToken
+            Log.d("LoginScreen", "Google Sign-In success, idToken present: ${idToken != null}")
             if (idToken != null) {
                 authViewModel.loginWithGoogle(idToken)
             } else {
                 authViewModel.onGoogleSignInError(Exception("Google ID Token is null"))
             }
         } catch (e: ApiException) {
+            Log.e("LoginScreen", "Google Sign-In API error: ${e.statusCode}", e)
+            authViewModel.onGoogleSignInError(e)
+        } catch (e: Exception) {
+            Log.e("LoginScreen", "Google Sign-In unexpected error", e)
             authViewModel.onGoogleSignInError(e)
         }
     }
@@ -160,7 +163,13 @@ fun LoginScreen(
                 VetCareTextField(value = state.email, onValueChange = authViewModel::onEmailChange, label = "Email")
             }
             item {
-                VetCareTextField(value = state.password, onValueChange = authViewModel::onPasswordChange, label = "Password")
+                VetCareTextField(
+                    value = state.password,
+                    onValueChange = authViewModel::onPasswordChange,
+                    label = "Password",
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                )
             }
             item {
                 VetCareButton(text = if (state.isLoading) "Signing in..." else "Login", onClick = authViewModel::login)
@@ -168,12 +177,11 @@ fun LoginScreen(
             item {
                 OutlinedButton(
                     onClick = {
-                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                            .requestIdToken(context.getString(com.example.vetcarepro.R.string.default_web_client_id))
-                            .requestEmail()
-                            .build()
-                        val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                        Log.d("LoginScreen", "Starting Google Sign-In flow")
+                        // Sign out first to ensure account picker is shown
+                        googleSignInClient.signOut().addOnCompleteListener {
+                            googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                        }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -223,11 +231,35 @@ fun DashboardScreen(
                     fontWeight = FontWeight.Bold
                 )
                 HorizontalDivider()
-                NavigationDrawerItem(
-                    label = { Text("Dashboard") },
-                    selected = true,
-                    onClick = { scope.launch { drawerState.close() } }
-                )
+                val role = session.user?.role
+                if (vetCareViewModel.canAccessRoute(role, "pet_registration")) {
+                    NavigationDrawerItem(label = { Text("Pet Registration") }, selected = false, onClick = { onNavigate("pet_registration"); scope.launch { drawerState.close() } })
+                }
+                if (vetCareViewModel.canAccessRoute(role, "owner_registration")) {
+                    NavigationDrawerItem(label = { Text("Owner Registration") }, selected = false, onClick = { onNavigate("owner_registration"); scope.launch { drawerState.close() } })
+                }
+                if (vetCareViewModel.canAccessRoute(role, "scanner")) {
+                    NavigationDrawerItem(label = { Text("QR Scanner") }, selected = false, onClick = { onNavigate("scanner"); scope.launch { drawerState.close() } })
+                }
+                if (vetCareViewModel.canAccessRoute(role, "appointments")) {
+                    NavigationDrawerItem(label = { Text("Appointments") }, selected = false, onClick = { onNavigate("appointments"); scope.launch { drawerState.close() } })
+                }
+                if (vetCareViewModel.canAccessRoute(role, "medical_history")) {
+                    NavigationDrawerItem(label = { Text("Medical History") }, selected = false, onClick = { onNavigate("medical_history"); scope.launch { drawerState.close() } })
+                }
+                if (vetCareViewModel.canAccessRoute(role, "branch_map")) {
+                    NavigationDrawerItem(label = { Text("Branches") }, selected = false, onClick = { onNavigate("branch_map"); scope.launch { drawerState.close() } })
+                }
+                if (vetCareViewModel.canAccessRoute(role, "vaccinations")) {
+                    NavigationDrawerItem(label = { Text("Vaccinations") }, selected = false, onClick = { onNavigate("vaccinations"); scope.launch { drawerState.close() } })
+                }
+                if (vetCareViewModel.canAccessRoute(role, "multimedia")) {
+                    NavigationDrawerItem(label = { Text("Multimedia") }, selected = false, onClick = { onNavigate("multimedia"); scope.launch { drawerState.close() } })
+                }
+                if (vetCareViewModel.canAccessRoute(role, "offline")) {
+                    NavigationDrawerItem(label = { Text("Offline Guides") }, selected = false, onClick = { onNavigate("offline"); scope.launch { drawerState.close() } })
+                }
+                HorizontalDivider()
                 NavigationDrawerItem(
                     label = { Text("Logout") },
                     selected = false,
@@ -275,40 +307,10 @@ fun DashboardScreen(
                 }
             }
             item {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val role = session.user?.role
-                    if (vetCareViewModel.canAccessRoute(role, "pet_registration")) {
-                        VetCareFilterChip(text = "Pet Registration", selected = true, onClick = { onNavigate("pet_registration") })
-                    }
-                    if (vetCareViewModel.canAccessRoute(role, "scanner")) {
-                        VetCareFilterChip(text = "Scanner", selected = true, onClick = { onNavigate("scanner") })
-                    }
-                    if (vetCareViewModel.canAccessRoute(role, "appointments")) {
-                        VetCareFilterChip(text = "Appointments", selected = true, onClick = { onNavigate("appointments") })
-                    }
-                    if (vetCareViewModel.canAccessRoute(role, "medical_history")) {
-                        VetCareFilterChip(text = "Medical History", selected = true, onClick = { onNavigate("medical_history") })
-                    }
-                    if (vetCareViewModel.canAccessRoute(role, "branch_map")) {
-                        VetCareFilterChip(text = "Branches", selected = true, onClick = { onNavigate("branch_map") })
-                    }
-                    if (vetCareViewModel.canAccessRoute(role, "vaccinations")) {
-                        VetCareFilterChip(text = "Vaccinations", selected = true, onClick = { onNavigate("vaccinations") })
-                    }
-                    if (vetCareViewModel.canAccessRoute(role, "multimedia")) {
-                        VetCareFilterChip(text = "Multimedia", selected = true, onClick = { onNavigate("multimedia") })
-                    }
-                    if (vetCareViewModel.canAccessRoute(role, "offline")) {
-                        VetCareFilterChip(text = "Offline", selected = true, onClick = { onNavigate("offline") })
-                    }
-                }
-            }
-            item {
                 Card {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Role based navigation", fontWeight = FontWeight.Bold)
-                        Text(session.user?.role?.label ?: "Guest")
-                        Text("Use the buttons to access enabled modules.")
+                        Text("Welcome to VetCare Pro", fontWeight = FontWeight.Bold)
+                        Text("Use the sidebar menu to navigate through the modules enabled for your role.")
                     }
                 }
             }
@@ -337,24 +339,17 @@ fun DashboardScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PetRegistrationScreen(vetCareViewModel: VetCareViewModel) {
-    val pets by vetCareViewModel.pets.collectAsStateWithLifecycle()
     val owners by vetCareViewModel.owners.collectAsStateWithLifecycle()
     var name by remember { mutableStateOf("") }
     var species by remember { mutableStateOf("") }
     var breed by remember { mutableStateOf("") }
     var birthDate by remember { mutableStateOf(LocalDate.now().toString()) }
-    var weight by remember { mutableStateOf("0") }
+    var weight by remember { mutableStateOf("") }
     var coatColor by remember { mutableStateOf("") }
     var microchipNumber by remember { mutableStateOf("") }
-    var photoUrl by remember { mutableStateOf("") }
-    var ownerId by remember { mutableStateOf(owners.firstOrNull()?.id.orEmpty()) }
-    var ownerName by remember { mutableStateOf(owners.firstOrNull()?.fullName.orEmpty()) }
+    var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var ownerId by remember { mutableStateOf("") }
     var qrCode by remember { mutableStateOf("") }
-
-    LaunchedEffect(owners) {
-        if (ownerId.isBlank()) ownerId = owners.firstOrNull()?.id.orEmpty()
-        if (ownerName.isBlank()) ownerName = owners.firstOrNull()?.fullName.orEmpty()
-    }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Pet Registration") }) }) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -366,41 +361,46 @@ fun PetRegistrationScreen(vetCareViewModel: VetCareViewModel) {
             item { VetCareTextField(weight, { weight = it }, "Weight") }
             item { VetCareTextField(coatColor, { coatColor = it }, "Coat color") }
             item { VetCareTextField(microchipNumber, { microchipNumber = it }, "Microchip number") }
-            item { VetCareTextField(photoUrl, { photoUrl = it }, "Photo URL") }
-            item { VetCareTextField(ownerId, { ownerId = it }, "Owner ID") }
-            item { VetCareTextField(ownerName, { ownerName = it }, "Owner name") }
-            item { VetCareTextField(qrCode, { qrCode = it }, "QR code") }
+            item {
+                VetCareImagePicker("Pet Photo", null, onImageSelected = { photoBytes = it })
+            }
+            item {
+                VetCareExposedDropdown(
+                    label = "Owner",
+                    selectedOption = ownerId,
+                    options = owners.map { it.id to it.fullName },
+                    onOptionSelected = { ownerId = it }
+                )
+            }
+            item { VetCareTextField(qrCode, { qrCode = it }, "QR code (optional)") }
             item {
                 VetCareButton("Save pet", onClick = {
+                    val selectedOwner = owners.firstOrNull { it.id == ownerId }
                     vetCareViewModel.savePet(
                         Pet(
                             name = name,
                             species = species,
                             breed = breed,
-                            birthDate = LocalDate.parse(birthDate),
+                            birthDate = runCatching { LocalDate.parse(birthDate) }.getOrElse { LocalDate.now() },
                             weight = weight.toDoubleOrNull() ?: 0.0,
                             coatColor = coatColor,
                             microchipNumber = microchipNumber,
-                            photoUrl = photoUrl,
                             ownerId = ownerId,
-                            ownerName = ownerName,
+                            ownerName = selectedOwner?.fullName ?: "",
                             qrCode = qrCode.ifBlank { "PET-$microchipNumber" }
-                        )
+                        ),
+                        photoBytes = photoBytes
                     )
-                    name = ""
-                    species = ""
-                    breed = ""
-                    birthDate = LocalDate.now().toString()
-                    weight = "0"
-                    coatColor = ""
-                    microchipNumber = ""
-                    photoUrl = ""
-                    qrCode = ""
+                    if (name.isNotBlank()) {
+                        name = ""; species = ""; breed = ""; birthDate = LocalDate.now().toString()
+                        weight = ""; coatColor = ""; microchipNumber = ""; qrCode = ""; ownerId = ""
+                        photoBytes = null
+                    }
                 })
             }
             item {
                 ScreenHeader(title = "Existing pets")
-                pets.forEach { pet ->
+                vetCareViewModel.pets.collectAsStateWithLifecycle().value.forEach { pet ->
                     Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(pet.name, fontWeight = FontWeight.Bold)
@@ -417,8 +417,57 @@ fun PetRegistrationScreen(vetCareViewModel: VetCareViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun OwnerRegistrationScreen(vetCareViewModel: VetCareViewModel) {
+    val owners by vetCareViewModel.owners.collectAsStateWithLifecycle()
+    var fullName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var documentId by remember { mutableStateOf("") }
+
+    Scaffold(topBar = { TopAppBar(title = { Text("Owner Registration") }) }) { padding ->
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item { ScreenHeader(title = "Register owner", subtitle = "Required for pet registration") }
+            item { VetCareTextField(fullName, { fullName = it }, "Full Name") }
+            item { VetCareTextField(email, { email = it }, "Email") }
+            item { VetCareTextField(phone, { phone = it }, "Phone") }
+            item { VetCareTextField(address, { address = it }, "Address") }
+            item { VetCareTextField(documentId, { documentId = it }, "Document ID") }
+            item {
+                VetCareButton("Save owner", onClick = {
+                    vetCareViewModel.saveOwner(
+                        Owner(
+                            fullName = fullName,
+                            email = email,
+                            phone = phone,
+                            address = address,
+                            documentId = documentId
+                        )
+                    )
+                    if (fullName.isNotBlank() && email.isNotBlank()) {
+                        fullName = ""; email = ""; phone = ""; address = ""; documentId = ""
+                    }
+                })
+            }
+            item {
+                ScreenHeader(title = "Existing owners")
+                owners.forEach { owner ->
+                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(owner.fullName, fontWeight = FontWeight.Bold)
+                            Text(owner.email)
+                            Text(owner.phone)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun QrScannerScreen(vetCareViewModel: VetCareViewModel, onPetFound: (String) -> Unit) {
-    val context = LocalContext.current
     var manualCode by remember { mutableStateOf("") }
     val launcher = rememberLauncherForActivityResult(ScanContract()) { result ->
         val contents = result.contents ?: return@rememberLauncherForActivityResult
@@ -444,31 +493,37 @@ fun QrScannerScreen(vetCareViewModel: VetCareViewModel, onPetFound: (String) -> 
 @Composable
 fun AppointmentCalendarScreen(vetCareViewModel: VetCareViewModel) {
     val appointments by vetCareViewModel.appointments.collectAsStateWithLifecycle()
-    val pets by vetCareViewModel.pets.collectAsStateWithLifecycle()
     val branches by vetCareViewModel.branches.collectAsStateWithLifecycle()
+    val pets by vetCareViewModel.pets.collectAsStateWithLifecycle()
+    val owners by vetCareViewModel.owners.collectAsStateWithLifecycle()
     var appointmentId by remember { mutableStateOf("") }
-    var petId by remember { mutableStateOf(pets.firstOrNull()?.id.orEmpty()) }
-    var ownerId by remember { mutableStateOf(pets.firstOrNull()?.ownerId.orEmpty()) }
-    var branchId by remember { mutableStateOf(branches.firstOrNull()?.id.orEmpty()) }
+    var petId by remember { mutableStateOf("") }
+    var branchId by remember { mutableStateOf("") }
     var dateTime by remember { mutableStateOf(LocalDateTime.now().plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))) }
     var reason by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var status by remember { mutableStateOf(AppointmentStatus.PENDING) }
     var serviceType by remember { mutableStateOf("") }
 
-    LaunchedEffect(pets, branches) {
-        if (petId.isBlank()) petId = pets.firstOrNull()?.id.orEmpty()
-        if (ownerId.isBlank()) ownerId = pets.firstOrNull()?.ownerId.orEmpty()
-        if (branchId.isBlank()) branchId = branches.firstOrNull()?.id.orEmpty()
-    }
-
     Scaffold(topBar = { TopAppBar(title = { Text("Appointment Calendar") }) }) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Appointments", subtitle = "Create, update, cancel, sync") }
-            item { VetCareTextField(appointmentId, { appointmentId = it }, "Appointment id (empty to create)") }
-            item { VetCareTextField(petId, { petId = it }, "Pet id") }
-            item { VetCareTextField(ownerId, { ownerId = it }, "Owner id") }
-            item { VetCareTextField(branchId, { branchId = it }, "Branch id") }
+            item {
+                VetCareExposedDropdown(
+                    label = "Pet",
+                    selectedOption = petId,
+                    options = pets.map { it.id to it.name },
+                    onOptionSelected = { petId = it }
+                )
+            }
+            item {
+                VetCareExposedDropdown(
+                    label = "Branch",
+                    selectedOption = branchId,
+                    options = branches.map { it.id to it.name },
+                    onOptionSelected = { branchId = it }
+                )
+            }
             item { VetCareTextField(dateTime, { dateTime = it }, "Date time yyyy-MM-dd HH:mm") }
             item { VetCareTextField(reason, { reason = it }, "Reason") }
             item { VetCareTextField(notes, { notes = it }, "Notes") }
@@ -488,13 +543,14 @@ fun AppointmentCalendarScreen(vetCareViewModel: VetCareViewModel) {
             }
             item {
                 VetCareButton("Save appointment", onClick = {
+                    val selectedPet = pets.firstOrNull { it.id == petId }
                     vetCareViewModel.saveAppointment(
                         Appointment(
                             id = appointmentId.ifBlank { "a-${System.currentTimeMillis()}" },
                             petId = petId,
-                            ownerId = ownerId,
+                            ownerId = selectedPet?.ownerId ?: "",
                             branchId = branchId,
-                            dateTime = LocalDateTime.parse(dateTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
+                            dateTime = runCatching { LocalDateTime.parse(dateTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) }.getOrElse { LocalDateTime.now().plusDays(1) },
                             status = status,
                             reason = reason,
                             notes = notes,
@@ -514,7 +570,6 @@ fun AppointmentCalendarScreen(vetCareViewModel: VetCareViewModel) {
                                 OutlinedButton(onClick = {
                                     appointmentId = appointment.id
                                     petId = appointment.petId
-                                    ownerId = appointment.ownerId
                                     branchId = appointment.branchId
                                     dateTime = appointment.dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
                                     reason = appointment.reason
@@ -536,17 +591,26 @@ fun AppointmentCalendarScreen(vetCareViewModel: VetCareViewModel) {
 @Composable
 fun MedicalHistoryScreen(vetCareViewModel: VetCareViewModel, petId: String?) {
     val pets by vetCareViewModel.pets.collectAsStateWithLifecycle()
-    val selectedPet = petId?.let { vetCareViewModel.petById(it) } ?: pets.firstOrNull()
+    var selectedPetId by remember { mutableStateOf(petId ?: "") }
+    val selectedPet = pets.firstOrNull { it.id == selectedPetId }
     val records = selectedPet?.let { vetCareViewModel.medicalRecordsForPet(it.id) }.orEmpty()
     var diagnosis by remember { mutableStateOf("") }
     var treatment by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
-    var temperature by remember { mutableStateOf("38.5") }
-    var weight by remember { mutableStateOf(selectedPet?.weight?.toString().orEmpty()) }
-    var imageUrl by remember { mutableStateOf("") }
+    var temperature by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
+    var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Medical History") }) }) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                VetCareExposedDropdown(
+                    label = "Select Pet",
+                    selectedOption = selectedPetId,
+                    options = pets.map { it.id to it.name },
+                    onOptionSelected = { selectedPetId = it }
+                )
+            }
             item { ScreenHeader(title = selectedPet?.name ?: "No pet selected", subtitle = "Chronological timeline") }
             item {
                 VetCareTextField(diagnosis, { diagnosis = it }, "Diagnosis")
@@ -554,7 +618,7 @@ fun MedicalHistoryScreen(vetCareViewModel: VetCareViewModel, petId: String?) {
                 VetCareTextField(notes, { notes = it }, "Notes")
                 VetCareTextField(temperature, { temperature = it }, "Temperature")
                 VetCareTextField(weight, { weight = it }, "Weight")
-                VetCareTextField(imageUrl, { imageUrl = it }, "Image URL")
+                VetCareImagePicker("Clinical Image", null, onImageSelected = { photoBytes = it })
                 VetCareButton("Add record", onClick = {
                     selectedPet?.let {
                         vetCareViewModel.saveMedicalRecord(
@@ -566,8 +630,7 @@ fun MedicalHistoryScreen(vetCareViewModel: VetCareViewModel, petId: String?) {
                                 treatment = treatment,
                                 notes = notes,
                                 temperature = temperature.toDoubleOrNull() ?: 0.0,
-                                weight = weight.toDoubleOrNull() ?: it.weight,
-                                images = imageUrl.takeIf { url -> url.isNotBlank() }?.let { url -> listOf(url) }.orEmpty()
+                                weight = weight.toDoubleOrNull() ?: it.weight
                             )
                         )
                     }
@@ -666,9 +729,9 @@ fun BranchMapScreen(vetCareViewModel: VetCareViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VaccinationControlScreen(vetCareViewModel: VetCareViewModel) {
-    val pets by vetCareViewModel.pets.collectAsStateWithLifecycle()
     val vaccines by vetCareViewModel.vaccines.collectAsStateWithLifecycle()
-    var petId by remember { mutableStateOf(pets.firstOrNull()?.id.orEmpty()) }
+    val pets by vetCareViewModel.pets.collectAsStateWithLifecycle()
+    var petId by remember { mutableStateOf("") }
     var vaccineName by remember { mutableStateOf("") }
     var laboratory by remember { mutableStateOf("") }
     var lot by remember { mutableStateOf("") }
@@ -679,7 +742,14 @@ fun VaccinationControlScreen(vetCareViewModel: VetCareViewModel) {
     Scaffold(topBar = { TopAppBar(title = { Text("Vaccination Control") }) }) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Vaccines", subtitle = "Green = up to date • Amber = expiring • Red = overdue") }
-            item { VetCareTextField(petId, { petId = it }, "Pet id") }
+            item {
+                VetCareExposedDropdown(
+                    label = "Pet",
+                    selectedOption = petId,
+                    options = pets.map { it.id to it.name },
+                    onOptionSelected = { petId = it }
+                )
+            }
             item { VetCareTextField(vaccineName, { vaccineName = it }, "Vaccine name") }
             item { VetCareTextField(laboratory, { laboratory = it }, "Laboratory") }
             item { VetCareTextField(lot, { lot = it }, "Lot") }

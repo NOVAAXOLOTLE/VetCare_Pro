@@ -20,6 +20,7 @@ import com.example.vetcarepro.domain.model.UserRole
 import com.example.vetcarepro.domain.model.VaccineRecord
 import com.example.vetcarepro.domain.repository.VetCareRepository
 import com.example.vetcarepro.domain.usecase.BootstrapUseCase
+import com.example.vetcarepro.domain.usecase.SaveOwnerUseCase
 import com.example.vetcarepro.domain.usecase.CancelAppointmentUseCase
 import com.example.vetcarepro.domain.usecase.ForgotPasswordUseCase
 import com.example.vetcarepro.domain.usecase.LoginUseCase
@@ -33,6 +34,9 @@ import com.example.vetcarepro.domain.usecase.SaveVaccineRecordUseCase
 import com.example.vetcarepro.domain.usecase.SearchPetsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -44,6 +48,10 @@ sealed interface VetCareUiState<out T> {
     object Loading : VetCareUiState<Nothing>
     data class Success<T>(val data: T) : VetCareUiState<T>
     data class Error(val message: String) : VetCareUiState<Nothing>
+}
+
+sealed class UiEvent {
+    data class ShowToast(val message: String) : UiEvent()
 }
 
 data class AuthUiState(
@@ -68,6 +76,9 @@ class AuthViewModel @Inject constructor(
     val state: StateFlow<AuthUiState> = _state
     val session: StateFlow<SessionState> = repository.session
 
+    private val _eventFlow = MutableSharedFlow<UiEvent>()
+    val eventFlow: SharedFlow<UiEvent> = _eventFlow.asSharedFlow()
+
     init {
         viewModelScope.launch { bootstrapUseCase() }
     }
@@ -77,11 +88,21 @@ class AuthViewModel @Inject constructor(
     fun onForgotEmailChange(value: String) { _state.value = _state.value.copy(forgotEmail = value, error = null, resetMessage = null) }
 
     fun login() {
+        if (_state.value.email.isBlank() || _state.value.password.isBlank()) {
+            viewModelScope.launch { _eventFlow.emit(UiEvent.ShowToast("Please fill all fields")) }
+            return
+        }
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             loginUseCase(_state.value.email, _state.value.password)
-                .onFailure { _state.value = _state.value.copy(isLoading = false, error = it.message ?: "Login failed") }
-                .onSuccess { _state.value = _state.value.copy(isLoading = false, password = "", error = null) }
+                .onFailure { 
+                    _state.value = _state.value.copy(isLoading = false, error = it.message ?: "Login failed")
+                    _eventFlow.emit(UiEvent.ShowToast(it.message ?: "Login failed"))
+                }
+                .onSuccess { 
+                    _state.value = _state.value.copy(isLoading = false, password = "", error = null)
+                    _eventFlow.emit(UiEvent.ShowToast("Welcome back!"))
+                }
         }
     }
 
@@ -89,8 +110,14 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             loginWithGoogleUseCase(idToken)
-                .onFailure { _state.value = _state.value.copy(isLoading = false, error = it.message ?: "Google Sign-In failed") }
-                .onSuccess { _state.value = _state.value.copy(isLoading = false, error = null) }
+                .onFailure { 
+                    _state.value = _state.value.copy(isLoading = false, error = it.message ?: "Google Sign-In failed")
+                    _eventFlow.emit(UiEvent.ShowToast(it.message ?: "Google Sign-In failed"))
+                }
+                .onSuccess { 
+                    _state.value = _state.value.copy(isLoading = false, error = null)
+                    _eventFlow.emit(UiEvent.ShowToast("Signed in with Google!"))
+                }
         }
     }
 
@@ -121,6 +148,7 @@ class AuthViewModel @Inject constructor(
 class VetCareViewModel @Inject constructor(
     private val repository: VetCareRepository,
     private val bootstrapUseCase: BootstrapUseCase,
+    private val saveOwnerUseCase: SaveOwnerUseCase,
     private val savePetUseCase: SavePetUseCase,
     private val searchPetsUseCase: SearchPetsUseCase,
     private val saveAppointmentUseCase: SaveAppointmentUseCase,
@@ -142,6 +170,9 @@ class VetCareViewModel @Inject constructor(
     val notifications = repository.notifications
     val mediaCatalog: StateFlow<List<MultimediaItem>> = repository.mediaCatalog
     val offlineGuides: StateFlow<List<OfflineGuide>> = repository.offlineGuides
+
+    private val _eventFlow = MutableSharedFlow<UiEvent>()
+    val eventFlow: SharedFlow<UiEvent> = _eventFlow.asSharedFlow()
 
     private val searchQuery = MutableStateFlow("")
     private val vaccinationOnly = MutableStateFlow(false)
@@ -178,24 +209,71 @@ class VetCareViewModel @Inject constructor(
     fun setMapMode(value: MapMode) { selectedMapMode.value = value }
     fun selectPet(petId: String?) { selectedPetId.value = petId }
 
+    fun saveOwner(owner: Owner) {
+        if (owner.fullName.isBlank() || owner.email.isBlank()) {
+            viewModelScope.launch { _eventFlow.emit(UiEvent.ShowToast("Name and Email are required")) }
+            return
+        }
+        viewModelScope.launch {
+            saveOwnerUseCase(owner)
+                .onSuccess { _eventFlow.emit(UiEvent.ShowToast("Owner saved successfully")) }
+                .onFailure { _eventFlow.emit(UiEvent.ShowToast("Error saving owner: ${it.message}")) }
+        }
+    }
+
     fun savePet(pet: Pet, photoBytes: ByteArray? = null) {
-        viewModelScope.launch { savePetUseCase(pet, photoBytes) }
+        if (pet.name.isBlank() || pet.species.isBlank() || pet.ownerId.isBlank()) {
+            viewModelScope.launch { _eventFlow.emit(UiEvent.ShowToast("Name, Species and Owner are required")) }
+            return
+        }
+        viewModelScope.launch { 
+            savePetUseCase(pet, photoBytes)
+                .onSuccess { _eventFlow.emit(UiEvent.ShowToast("Pet saved successfully")) }
+                .onFailure { _eventFlow.emit(UiEvent.ShowToast("Error saving pet: ${it.message}")) }
+        }
     }
 
     fun saveAppointment(appointment: Appointment) {
-        viewModelScope.launch { saveAppointmentUseCase(appointment) }
+        if (appointment.petId.isBlank() || appointment.reason.isBlank() || appointment.branchId.isBlank()) {
+            viewModelScope.launch { _eventFlow.emit(UiEvent.ShowToast("Pet, Reason and Branch are required")) }
+            return
+        }
+        viewModelScope.launch { 
+            saveAppointmentUseCase(appointment)
+                .onSuccess { _eventFlow.emit(UiEvent.ShowToast("Appointment scheduled")) }
+                .onFailure { _eventFlow.emit(UiEvent.ShowToast("Error: ${it.message}")) }
+        }
     }
 
     fun cancelAppointment(appointmentId: String) {
-        viewModelScope.launch { cancelAppointmentUseCase(appointmentId) }
+        viewModelScope.launch { 
+            cancelAppointmentUseCase(appointmentId)
+                .onSuccess { _eventFlow.emit(UiEvent.ShowToast("Appointment cancelled")) }
+        }
     }
 
     fun saveMedicalRecord(record: MedicalRecord) {
-        viewModelScope.launch { saveMedicalRecordUseCase(record) }
+        if (record.diagnosis.isBlank() || record.treatment.isBlank()) {
+            viewModelScope.launch { _eventFlow.emit(UiEvent.ShowToast("Diagnosis and Treatment are required")) }
+            return
+        }
+        viewModelScope.launch { 
+            saveMedicalRecordUseCase(record)
+                .onSuccess { _eventFlow.emit(UiEvent.ShowToast("Record added to history")) }
+                .onFailure { _eventFlow.emit(UiEvent.ShowToast("Error: ${it.message}")) }
+        }
     }
 
     fun saveVaccineRecord(record: VaccineRecord) {
-        viewModelScope.launch { saveVaccineRecordUseCase(record) }
+        if (record.vaccineName.isBlank() || record.petId.isBlank()) {
+            viewModelScope.launch { _eventFlow.emit(UiEvent.ShowToast("Pet and Vaccine Name are required")) }
+            return
+        }
+        viewModelScope.launch { 
+            saveVaccineRecordUseCase(record)
+                .onSuccess { _eventFlow.emit(UiEvent.ShowToast("Vaccination record saved")) }
+                .onFailure { _eventFlow.emit(UiEvent.ShowToast("Error: ${it.message}")) }
+        }
     }
 
     fun findPetByQrCode(qrCode: String): Pet? =

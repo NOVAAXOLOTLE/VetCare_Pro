@@ -2,6 +2,7 @@ package com.example.vetcarepro.domain.usecase
 
 import com.example.vetcarepro.domain.model.Appointment
 import com.example.vetcarepro.domain.model.MedicalRecord
+import com.example.vetcarepro.domain.model.Owner
 import com.example.vetcarepro.domain.model.Pet
 import com.example.vetcarepro.domain.model.VaccineRecord
 import com.example.vetcarepro.domain.repository.VetCareRepository
@@ -25,6 +26,10 @@ class ForgotPasswordUseCase @Inject constructor(private val repository: VetCareR
 
 class LogoutUseCase @Inject constructor(private val repository: VetCareRepository) {
     suspend operator fun invoke() = repository.logout()
+}
+
+class SaveOwnerUseCase @Inject constructor(private val repository: VetCareRepository) {
+    suspend operator fun invoke(owner: Owner) = repository.saveOwner(owner)
 }
 
 class SavePetUseCase @Inject constructor(private val repository: VetCareRepository) {

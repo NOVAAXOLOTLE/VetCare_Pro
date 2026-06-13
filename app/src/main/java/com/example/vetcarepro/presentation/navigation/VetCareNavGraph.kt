@@ -2,9 +2,13 @@ package com.example.vetcarepro.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.flow.collectLatest
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -16,6 +20,7 @@ import com.example.vetcarepro.presentation.screens.LoginScreen
 import com.example.vetcarepro.presentation.screens.MedicalHistoryScreen
 import com.example.vetcarepro.presentation.screens.MultimediaCatalogScreen
 import com.example.vetcarepro.presentation.screens.OfflineInformationScreen
+import com.example.vetcarepro.presentation.screens.OwnerRegistrationScreen
 import com.example.vetcarepro.presentation.screens.PetRegistrationScreen
 import com.example.vetcarepro.presentation.screens.QrScannerScreen
 import com.example.vetcarepro.presentation.screens.VaccinationControlScreen
@@ -26,13 +31,37 @@ import com.example.vetcarepro.presentation.viewmodels.VetCareViewModel
 fun VetCareNavGraph(navController: NavHostController) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val vetCareViewModel: VetCareViewModel = hiltViewModel()
-    val session = authViewModel.session.collectAsStateWithLifecycle().value
+    val session by authViewModel.session.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        authViewModel.eventFlow.collectLatest { event ->
+            when (event) {
+                is com.example.vetcarepro.presentation.viewmodels.UiEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        vetCareViewModel.eventFlow.collectLatest { event ->
+            when (event) {
+                is com.example.vetcarepro.presentation.viewmodels.UiEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(session.isAuthenticated) {
-        if (session.isAuthenticated && navController.currentDestination?.route != VetCareRoutes.Dashboard) {
-            navController.navigate(VetCareRoutes.Dashboard) {
-                popUpTo(VetCareRoutes.Login) { inclusive = true }
-                launchSingleTop = true
+        if (session.isAuthenticated) {
+            val currentRoute = navController.currentDestination?.route
+            if (currentRoute == null || currentRoute == VetCareRoutes.Login) {
+                navController.navigate(VetCareRoutes.Dashboard) {
+                    popUpTo(VetCareRoutes.Login) { inclusive = true }
+                    launchSingleTop = true
+                }
             }
         }
     }
