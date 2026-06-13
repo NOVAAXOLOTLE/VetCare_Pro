@@ -91,6 +91,9 @@ fun VetCareNavGraph(navController: NavHostController) {
         composable(VetCareRoutes.PetRegistration) {
             PetRegistrationScreen(vetCareViewModel = vetCareViewModel)
         }
+        composable(VetCareRoutes.OwnerRegistration) {
+            OwnerRegistrationScreen(vetCareViewModel = vetCareViewModel)
+        }
         composable(VetCareRoutes.Scanner) {
             QrScannerScreen(vetCareViewModel = vetCareViewModel) { petId ->
                 navController.navigate(VetCareRoutes.medicalHistoryRoute(petId))
