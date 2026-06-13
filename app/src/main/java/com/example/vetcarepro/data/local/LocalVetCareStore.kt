@@ -488,8 +488,19 @@ class LocalVetCareStore(private val appContext: Context) {
     }
 
     fun canAccessRoute(role: UserRole?, route: String): Boolean {
-        if (route == "login") return true
-        return role != null
+        if (route == "login" || route == "dashboard") return true
+        val userRole = role ?: return false
+        return when (route) {
+            "pet_registration" -> userRole == UserRole.VETERINARIO || userRole == UserRole.RECEPCIONISTA
+            "scanner" -> userRole == UserRole.VETERINARIO
+            "appointments" -> true // All can see their context
+            "medical_history" -> true
+            "branch_map" -> true
+            "vaccinations" -> true
+            "multimedia" -> true
+            "offline" -> true
+            else -> true
+        }
     }
 
     private suspend fun loadOfflineGuides(): List<OfflineGuide> {

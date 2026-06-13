@@ -12,7 +12,20 @@
           "package_name": "com.example.vetcarepro"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "231529362836-a7jb9s957cp99ub40kl7p02h6m5bbi8e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.vetcarepro",
+            "certificate_hash": "c8dc55e4cbe5126aa53f31f5d5be2be8329297a7"
+          }
+        },
+        {
+          "client_id": "231529362836-44mvrtp1u9m183g7g1to668iqr7kouif.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAtfQDSH2Lkq0xWeup6W2kwB63wl0knI64"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "231529362836-44mvrtp1u9m183g7g1to668iqr7kouif.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

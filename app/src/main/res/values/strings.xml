@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">VetCare Pro</string>
     <string name="tagline">Salud que se siente</string>
-    <string name="google_maps_key">YOUR_MAPS_KEY</string>
+    <string name="google_maps_key">AIzaSyCorscStNK4RexfZDDw_TuBP-dX8L_ABTk</string>
     <string name="login">Login</string>
     <string name="dashboard">Dashboard</string>
     <string name="pets">Pets</string>

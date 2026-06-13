@@ -35,6 +35,7 @@ interface VetCareRepository {
 
     suspend fun bootstrap()
     suspend fun login(email: String, password: String): Result<AppUser>
+    suspend fun loginWithGoogle(idToken: String): Result<AppUser>
     suspend fun forgotPassword(email: String): Result<Unit>
     suspend fun logout()
     suspend fun savePet(pet: Pet, photoBytes: ByteArray? = null): Result<Pet>

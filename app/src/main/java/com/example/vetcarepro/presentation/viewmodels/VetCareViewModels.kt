@@ -1,6 +1,7 @@
 package com.example.vetcarepro.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
+import com.google.android.gms.common.api.ApiException
 import androidx.lifecycle.viewModelScope
 import com.example.vetcarepro.domain.model.Appointment
 import com.example.vetcarepro.domain.model.AppointmentStatus
@@ -22,6 +23,7 @@ import com.example.vetcarepro.domain.usecase.BootstrapUseCase
 import com.example.vetcarepro.domain.usecase.CancelAppointmentUseCase
 import com.example.vetcarepro.domain.usecase.ForgotPasswordUseCase
 import com.example.vetcarepro.domain.usecase.LoginUseCase
+import com.example.vetcarepro.domain.usecase.LoginWithGoogleUseCase
 import com.example.vetcarepro.domain.usecase.LogoutUseCase
 import com.example.vetcarepro.domain.usecase.RefreshRemindersUseCase
 import com.example.vetcarepro.domain.usecase.SaveAppointmentUseCase
@@ -38,6 +40,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+sealed interface VetCareUiState<out T> {
+    object Loading : VetCareUiState<Nothing>
+    data class Success<T>(val data: T) : VetCareUiState<T>
+    data class Error(val message: String) : VetCareUiState<Nothing>
+}
+
 data class AuthUiState(
     val email: String = "",
     val password: String = "",
@@ -50,6 +58,7 @@ data class AuthUiState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
+    private val loginWithGoogleUseCase: LoginWithGoogleUseCase,
     private val forgotPasswordUseCase: ForgotPasswordUseCase,
     private val logoutUseCase: LogoutUseCase,
     repository: VetCareRepository,
@@ -74,6 +83,24 @@ class AuthViewModel @Inject constructor(
                 .onFailure { _state.value = _state.value.copy(isLoading = false, error = it.message ?: "Login failed") }
                 .onSuccess { _state.value = _state.value.copy(isLoading = false, password = "", error = null) }
         }
+    }
+
+    fun loginWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            loginWithGoogleUseCase(idToken)
+                .onFailure { _state.value = _state.value.copy(isLoading = false, error = it.message ?: "Google Sign-In failed") }
+                .onSuccess { _state.value = _state.value.copy(isLoading = false, error = null) }
+        }
+    }
+
+    fun onGoogleSignInError(e: Exception) {
+        val message = if (e is ApiException) {
+            "Google error ${e.statusCode}: ${e.message}"
+        } else {
+            e.message ?: "Google Sign-In failed"
+        }
+        _state.value = _state.value.copy(isLoading = false, error = message)
     }
 
     fun forgotPassword() {
@@ -183,7 +210,7 @@ class VetCareViewModel @Inject constructor(
     fun userById(userId: String): AppUser? = repository.userById(userId)
     fun mediaByCategory(category: MediaCategory? = selectedMediaCategory.value): List<MultimediaItem> = repository.mediaByCategory(category)
     fun guidesByQuery(query: String): List<OfflineGuide> = repository.guidesByQuery(query)
-    fun canAccessRoute(route: String): Boolean = repository.canAccessRoute(session.value.user?.role, route)
+    fun canAccessRoute(role: UserRole?, route: String): Boolean = repository.canAccessRoute(role, route)
     fun markNotificationRead(notificationId: String) {
         viewModelScope.launch { repository.markNotificationRead(notificationId) }
     }

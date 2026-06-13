@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.vetcarepro.data.local.LocalVetCareStore
 import com.example.vetcarepro.data.remote.toAppNotification
+import com.example.vetcarepro.data.remote.toAppUser
 import com.example.vetcarepro.data.remote.toAppointment
 import com.example.vetcarepro.data.remote.toFirestore
 import com.example.vetcarepro.data.remote.toMedicalRecord
@@ -54,8 +55,7 @@ class FirebaseVetCareRepository @Inject constructor(
     private val localStore: LocalVetCareStore,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : VetCareRepository {
-    private val firebaseReady: Boolean
-        get() = FirebaseApp.getApps(context).isNotEmpty()
+    private val firebaseReady: Boolean = true
 
     private val auth: FirebaseAuth?
         get() = if (firebaseReady) FirebaseAuth.getInstance() else null
@@ -102,10 +102,40 @@ class FirebaseVetCareRepository @Inject constructor(
         return localResult
     }
 
+    override suspend fun loginWithGoogle(idToken: String): Result<AppUser> {
+        val auth = auth ?: return Result.failure(Exception("Firebase not ready"))
+        return runCatching {
+            val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+            val authResult = auth.signInWithCredential(credential).await()
+            val firebaseUser = authResult.user ?: throw Exception("Google sign in failed")
+            
+            // Map Firebase User to AppUser. Try to fetch from Firestore first.
+            val email = firebaseUser.email.orEmpty()
+            
+            val userDoc = firestore?.collection("users")?.document(firebaseUser.uid)?.get()?.await()
+            val appUser = if (userDoc?.exists() == true) {
+                userDoc.data.orEmpty().toAppUser()
+            } else {
+                val existing = localStore.users.value.firstOrNull { it.email.equals(email, ignoreCase = true) }
+                existing ?: AppUser(
+                    id = firebaseUser.uid,
+                    email = email,
+                    fullName = firebaseUser.displayName ?: "Google User",
+                    role = UserRole.PROPIETARIO // Default role for social login
+                )
+            }
+            
+            persistSession(appUser)
+            appUser
+        }
+    }
+
     override suspend fun forgotPassword(email: String): Result<Unit> {
         val local = localStore.forgotPassword(email)
         if (local.isSuccess) {
-            auth?.sendPasswordResetEmail(email.trim())?.await()
+            runCatching {
+                auth?.sendPasswordResetEmail(email.trim())?.await()
+            }
         }
         return local
     }
@@ -239,7 +269,9 @@ class FirebaseVetCareRepository @Inject constructor(
     private suspend fun syncDocument(collection: String, documentId: String, data: Map<String, Any?>) {
         val firestore = firestore ?: return
         if (documentId.isBlank() || data.isEmpty()) return
-        firestore.collection(collection).document(documentId).set(data).await()
+        runCatching {
+            firestore.collection(collection).document(documentId).set(data).await()
+        }
     }
 
     private object SessionKeys {

@@ -3,6 +3,10 @@ package com.example.vetcarepro.presentation.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +47,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.IconButton
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +64,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -105,6 +120,24 @@ fun LoginScreen(
 ) {
     val state by authViewModel.state.collectAsStateWithLifecycle()
     val session by authViewModel.session.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val idToken: String? = account?.idToken
+            if (idToken != null) {
+                authViewModel.loginWithGoogle(idToken)
+            } else {
+                authViewModel.onGoogleSignInError(Exception("Google ID Token is null"))
+            }
+        } catch (e: ApiException) {
+            authViewModel.onGoogleSignInError(e)
+        }
+    }
 
     LaunchedEffect(session.isAuthenticated) {
         if (session.isAuthenticated) onLoginSuccess()
@@ -133,6 +166,21 @@ fun LoginScreen(
                 VetCareButton(text = if (state.isLoading) "Signing in..." else "Login", onClick = authViewModel::login)
             }
             item {
+                OutlinedButton(
+                    onClick = {
+                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(context.getString(com.example.vetcarepro.R.string.default_web_client_id))
+                            .requestEmail()
+                            .build()
+                        val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Sign in with Google")
+                }
+            }
+            item {
                 VetCareTextField(value = state.forgotEmail, onValueChange = authViewModel::onForgotEmailChange, label = "Forgot password email")
             }
             item {
@@ -159,20 +207,59 @@ fun DashboardScreen(
     val session by vetCareViewModel.session.collectAsStateWithLifecycle()
     val dashboard by vetCareViewModel.dashboard.collectAsStateWithLifecycle()
     val notifications by vetCareViewModel.notifications.collectAsStateWithLifecycle()
+    
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Dashboard") },
-            actions = {
-                TextButton(onClick = onLogout) { Text("Logout") }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary, titleContentColor = MaterialTheme.colorScheme.onPrimary, actionIconContentColor = MaterialTheme.colorScheme.onPrimary)
-        )
-    }) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "VetCare Pro",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                HorizontalDivider()
+                NavigationDrawerItem(
+                    label = { Text("Dashboard") },
+                    selected = true,
+                    onClick = { scope.launch { drawerState.close() } }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Logout") },
+                    selected = false,
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            onLogout()
+                        }
+                    }
+                )
+            }
+        }
+    ) {
+        Scaffold(topBar = {
+            TopAppBar(
+                title = { Text("Dashboard") },
+                navigationIcon = {
+                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }) { padding ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             item {
                 ScreenHeader(
                     title = session.user?.fullName ?: "VetCare Pro",
@@ -189,14 +276,31 @@ fun DashboardScreen(
             }
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    VetCareFilterChip("Pet Registration", true, onClick = { onNavigate("pet_registration") })
-                    VetCareFilterChip("Scanner", true, onClick = { onNavigate("scanner") })
-                    VetCareFilterChip("Appointments", true, onClick = { onNavigate("appointments") })
-                    VetCareFilterChip("Medical History", true, onClick = { onNavigate("medical_history") })
-                    VetCareFilterChip("Branches", true, onClick = { onNavigate("branch_map") })
-                    VetCareFilterChip("Vaccinations", true, onClick = { onNavigate("vaccinations") })
-                    VetCareFilterChip("Multimedia", true, onClick = { onNavigate("multimedia") })
-                    VetCareFilterChip("Offline", true, onClick = { onNavigate("offline") })
+                    val role = session.user?.role
+                    if (vetCareViewModel.canAccessRoute(role, "pet_registration")) {
+                        VetCareFilterChip(text = "Pet Registration", selected = true, onClick = { onNavigate("pet_registration") })
+                    }
+                    if (vetCareViewModel.canAccessRoute(role, "scanner")) {
+                        VetCareFilterChip(text = "Scanner", selected = true, onClick = { onNavigate("scanner") })
+                    }
+                    if (vetCareViewModel.canAccessRoute(role, "appointments")) {
+                        VetCareFilterChip(text = "Appointments", selected = true, onClick = { onNavigate("appointments") })
+                    }
+                    if (vetCareViewModel.canAccessRoute(role, "medical_history")) {
+                        VetCareFilterChip(text = "Medical History", selected = true, onClick = { onNavigate("medical_history") })
+                    }
+                    if (vetCareViewModel.canAccessRoute(role, "branch_map")) {
+                        VetCareFilterChip(text = "Branches", selected = true, onClick = { onNavigate("branch_map") })
+                    }
+                    if (vetCareViewModel.canAccessRoute(role, "vaccinations")) {
+                        VetCareFilterChip(text = "Vaccinations", selected = true, onClick = { onNavigate("vaccinations") })
+                    }
+                    if (vetCareViewModel.canAccessRoute(role, "multimedia")) {
+                        VetCareFilterChip(text = "Multimedia", selected = true, onClick = { onNavigate("multimedia") })
+                    }
+                    if (vetCareViewModel.canAccessRoute(role, "offline")) {
+                        VetCareFilterChip(text = "Offline", selected = true, onClick = { onNavigate("offline") })
+                    }
                 }
             }
             item {
@@ -227,6 +331,7 @@ fun DashboardScreen(
             }
         }
     }
+}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -512,13 +617,29 @@ fun BranchMapScreen(vetCareViewModel: VetCareViewModel) {
             }
             item {
                 GoogleMap(
-                    modifier = Modifier.fillMaxWidth().height(260.dp),
+                    modifier = Modifier.fillMaxWidth().height(400.dp),
                     cameraPositionState = cameraPositionState,
-                    properties = MapProperties(),
+                    properties = MapProperties(
+                        mapType = when (mapMode) {
+                            MapMode.NORMAL -> com.google.maps.android.compose.MapType.NORMAL
+                            MapMode.SATELLITE -> com.google.maps.android.compose.MapType.SATELLITE
+                            MapMode.HYBRID -> com.google.maps.android.compose.MapType.HYBRID
+                        }
+                    ),
                     uiSettings = MapUiSettings(zoomControlsEnabled = true)
                 ) {
                     branches.forEach { branch ->
-                        Marker(state = MarkerState(LatLng(branch.latitude, branch.longitude)), title = branch.name, snippet = branch.address)
+                        Marker(
+                            state = MarkerState(position = LatLng(branch.latitude, branch.longitude)),
+                            title = branch.name,
+                            snippet = branch.address,
+                            onInfoWindowClick = {
+                                val gmmIntentUri = Uri.parse("google.navigation:q=${branch.latitude},${branch.longitude}")
+                                val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                                mapIntent.setPackage("com.google.android.apps.maps")
+                                context.startActivity(mapIntent)
+                            }
+                        )
                     }
                 }
             }
@@ -584,17 +705,19 @@ fun VaccinationControlScreen(vetCareViewModel: VetCareViewModel) {
                 vaccines.sortedByDescending { it.nextDoseDate }.forEach { record ->
                     val status = record.status()
                     val color = when (status) {
-                        VaccinationStatus.UP_TO_DATE -> MaterialTheme.colorScheme.primary
-                        VaccinationStatus.EXPIRING -> MaterialTheme.colorScheme.tertiary
-                        VaccinationStatus.OVERDUE -> MaterialTheme.colorScheme.error
+                        VaccinationStatus.UP_TO_DATE -> Color(0xFF2E7D32) // Success Green
+                        VaccinationStatus.EXPIRING -> Color(0xFFF9A825)   // Warning Amber
+                        VaccinationStatus.OVERDUE -> Color(0xFFE64A19)    // Accent Red
                     }
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(record.vaccineName, fontWeight = FontWeight.Bold)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(record.vaccineName, fontWeight = FontWeight.Bold)
+                                Box(modifier = Modifier.size(16.dp).background(color, RoundedCornerShape(999.dp)))
+                            }
                             Text("${record.laboratory} • ${record.lot}")
                             Text("Next dose: ${record.nextDoseDate}")
-                            SmallInfoPill(status.label)
-                            Text(status.label, color = color)
+                            Text(status.name, color = color, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -664,17 +787,3 @@ fun OfflineInformationScreen(vetCareViewModel: VetCareViewModel) {
         }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun LoginPreview() {
-    Card { Text("Login screen preview") }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DashboardPreview() {
-    Card { Text("Dashboard screen preview") }
-}
-
-

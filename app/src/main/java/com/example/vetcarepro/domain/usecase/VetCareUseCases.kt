@@ -15,6 +15,10 @@ class LoginUseCase @Inject constructor(private val repository: VetCareRepository
     suspend operator fun invoke(email: String, password: String) = repository.login(email, password)
 }
 
+class LoginWithGoogleUseCase @Inject constructor(private val repository: VetCareRepository) {
+    suspend operator fun invoke(idToken: String) = repository.loginWithGoogle(idToken)
+}
+
 class ForgotPasswordUseCase @Inject constructor(private val repository: VetCareRepository) {
     suspend operator fun invoke(email: String) = repository.forgotPassword(email)
 }
