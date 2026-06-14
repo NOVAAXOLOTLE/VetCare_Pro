@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -154,6 +155,13 @@ class LocalVetCareStore(private val appContext: Context) {
             SessionState()
         }
     }
+
+    fun setOwners(items: List<Owner>) { _owners.value = items; scope.launch { refreshDashboard() } }
+    fun setPets(items: List<Pet>) { _pets.value = items; scope.launch { refreshDashboard() } }
+    fun setAppointments(items: List<Appointment>) { _appointments.value = items; scope.launch { refreshDashboard() } }
+    fun setMedicalRecords(items: List<MedicalRecord>) { _medicalRecords.value = items; scope.launch { refreshDashboard() } }
+    fun setVaccines(items: List<VaccineRecord>) { _vaccines.value = items; scope.launch { refreshDashboard() } }
+    fun setNotifications(items: List<AppNotification>) { _notifications.value = items; scope.launch { refreshDashboard() } }
 
     suspend fun forgotPassword(email: String): Result<Unit> = runCatching {
         require(_users.value.any { it.email.equals(email.trim(), ignoreCase = true) }) { "Email not found" }
@@ -318,6 +326,7 @@ class LocalVetCareStore(private val appContext: Context) {
         if (route == "login" || route == "dashboard") return true
         val userRole = role ?: return false
         return when (route) {
+            "owner_registration" -> userRole == UserRole.VETERINARIO || userRole == UserRole.RECEPCIONISTA
             "pet_registration" -> userRole == UserRole.VETERINARIO || userRole == UserRole.RECEPCIONISTA
             "scanner" -> userRole == UserRole.VETERINARIO
             "appointments" -> true // All can see their context

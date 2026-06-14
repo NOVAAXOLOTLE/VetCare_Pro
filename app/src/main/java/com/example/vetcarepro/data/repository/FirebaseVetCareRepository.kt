@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.example.vetcarepro.data.local.LocalVetCareStore
 import com.example.vetcarepro.data.remote.toAppNotification
 import com.example.vetcarepro.data.remote.toAppUser
+import com.example.vetcarepro.data.remote.toOwner
 import com.example.vetcarepro.data.remote.toAppointment
 import com.example.vetcarepro.data.remote.toFirestore
 import com.example.vetcarepro.data.remote.toMedicalRecord
@@ -85,12 +86,36 @@ class FirebaseVetCareRepository @Inject constructor(
         withContext(ioDispatcher) {
             localStore.bootstrap()
             loadPersistentSession()
+            setupListeners()
             if (firebaseReady && auth?.currentUser != null && session.value.user == null) {
                 localStore.login(
                     email = auth!!.currentUser?.email.orEmpty(),
                     password = "Vet12345"
                 )
             }
+        }
+    }
+
+    private fun setupListeners() {
+        val firestore = firestore ?: return
+        
+        firestore.collection("owners").addSnapshotListener { snapshot, _ ->
+            snapshot?.let { localStore.setOwners(it.documents.map { doc -> doc.data.orEmpty().toOwner() }) }
+        }
+        firestore.collection("pets").addSnapshotListener { snapshot, _ ->
+            snapshot?.let { localStore.setPets(it.documents.map { doc -> doc.data.orEmpty().toPet() }) }
+        }
+        firestore.collection("appointments").addSnapshotListener { snapshot, _ ->
+            snapshot?.let { localStore.setAppointments(it.documents.map { doc -> doc.data.orEmpty().toAppointment() }) }
+        }
+        firestore.collection("medical_records").addSnapshotListener { snapshot, _ ->
+            snapshot?.let { localStore.setMedicalRecords(it.documents.map { doc -> doc.data.orEmpty().toMedicalRecord() }) }
+        }
+        firestore.collection("vaccines").addSnapshotListener { snapshot, _ ->
+            snapshot?.let { localStore.setVaccines(it.documents.map { doc -> doc.data.orEmpty().toVaccineRecord() }) }
+        }
+        firestore.collection("notifications").addSnapshotListener { snapshot, _ ->
+            snapshot?.let { localStore.setNotifications(it.documents.map { doc -> doc.data.orEmpty().toAppNotification() }) }
         }
     }
 

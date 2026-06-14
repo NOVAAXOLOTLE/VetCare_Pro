@@ -5,6 +5,7 @@ import android.util.Log
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -60,10 +61,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.vetcarepro.R
 import com.example.vetcarepro.domain.model.Appointment
 import com.example.vetcarepro.domain.model.AppointmentStatus
 import com.example.vetcarepro.domain.model.MapMode
@@ -153,9 +156,23 @@ fun LoginScreen(
         )
     }) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
+                    Image(
+                        painter = painterResource(id= R.drawable.app_logo_tran), // This points to your file
+                        contentDescription = "App Logo",
+                        modifier = Modifier.size(120.dp)
+                    )
+                }
+            }
             item {
                 ScreenHeader(title = "Welcome", subtitle = "Salud que se siente")
             }
@@ -289,7 +306,10 @@ fun DashboardScreen(
             )
         }) { padding ->
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
             item {
@@ -308,7 +328,9 @@ fun DashboardScreen(
             }
             item {
                 Card {
-                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Welcome to VetCare Pro", fontWeight = FontWeight.Bold)
                         Text("Use the sidebar menu to navigate through the modules enabled for your role.")
                     }
@@ -317,7 +339,9 @@ fun DashboardScreen(
             item {
                 ScreenHeader(title = "Notifications")
                 notifications.take(3).forEach { notification ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(notification.title, fontWeight = FontWeight.Bold)
                             Text(notification.message)
@@ -352,7 +376,10 @@ fun PetRegistrationScreen(vetCareViewModel: VetCareViewModel) {
     var qrCode by remember { mutableStateOf("") }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Pet Registration") }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Register pet", subtitle = "Store data in Firestore-ready format") }
             item { VetCareTextField(name, { name = it }, "Name") }
             item { VetCareTextField(species, { species = it }, "Species") }
@@ -401,7 +428,9 @@ fun PetRegistrationScreen(vetCareViewModel: VetCareViewModel) {
             item {
                 ScreenHeader(title = "Existing pets")
                 vetCareViewModel.pets.collectAsStateWithLifecycle().value.forEach { pet ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(pet.name, fontWeight = FontWeight.Bold)
                             Text("${pet.species} • ${pet.breed}")
@@ -426,7 +455,10 @@ fun OwnerRegistrationScreen(vetCareViewModel: VetCareViewModel) {
     var documentId by remember { mutableStateOf("") }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Owner Registration") }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Register owner", subtitle = "Required for pet registration") }
             item { VetCareTextField(fullName, { fullName = it }, "Full Name") }
             item { VetCareTextField(email, { email = it }, "Email") }
@@ -452,7 +484,9 @@ fun OwnerRegistrationScreen(vetCareViewModel: VetCareViewModel) {
             item {
                 ScreenHeader(title = "Existing owners")
                 owners.forEach { owner ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(owner.fullName, fontWeight = FontWeight.Bold)
                             Text(owner.email)
@@ -475,7 +509,10 @@ fun QrScannerScreen(vetCareViewModel: VetCareViewModel, onPetFound: (String) -> 
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text("QR Scanner") }) }) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ScreenHeader(title = "Scan pet QR", subtitle = "Open the record directly")
             VetCareButton("Start ZXing scan", onClick = {
                 val options = ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setPrompt("Scan pet QR").setBeepEnabled(true).setOrientationLocked(false)
@@ -506,7 +543,10 @@ fun AppointmentCalendarScreen(vetCareViewModel: VetCareViewModel) {
     var serviceType by remember { mutableStateOf("") }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Appointment Calendar") }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Appointments", subtitle = "Create, update, cancel, sync") }
             item {
                 VetCareExposedDropdown(
@@ -561,9 +601,13 @@ fun AppointmentCalendarScreen(vetCareViewModel: VetCareViewModel) {
             }
             item {
                 appointments.sortedBy { it.dateTime }.forEach { appointment ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    val pet = pets.firstOrNull { it.id == appointment.petId }
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(appointment.reason, fontWeight = FontWeight.Bold)
+                            Text("Pet: ${pet?.name ?: "Unknown"}", fontWeight = FontWeight.Bold)
+                            Text(appointment.reason)
                             Text(appointment.formattedDateTime())
                             Text(appointment.status.label)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -602,7 +646,10 @@ fun MedicalHistoryScreen(vetCareViewModel: VetCareViewModel, petId: String?) {
     var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Medical History") }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 VetCareExposedDropdown(
                     label = "Select Pet",
@@ -638,7 +685,9 @@ fun MedicalHistoryScreen(vetCareViewModel: VetCareViewModel, petId: String?) {
             }
             item {
                 records.forEach { record ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(record.diagnosis, fontWeight = FontWeight.Bold)
                             Text(record.formattedDateTime())
@@ -647,7 +696,9 @@ fun MedicalHistoryScreen(vetCareViewModel: VetCareViewModel, petId: String?) {
                             Text(record.notes)
                             if (record.images.isNotEmpty()) {
                                 record.images.forEach { image ->
-                                    AsyncImage(model = image, contentDescription = null, modifier = Modifier.fillMaxWidth().height(180.dp))
+                                    AsyncImage(model = image, contentDescription = null, modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp))
                                 }
                             }
                         }
@@ -669,7 +720,10 @@ fun BranchMapScreen(vetCareViewModel: VetCareViewModel) {
     val context = LocalContext.current
 
     Scaffold(topBar = { TopAppBar(title = { Text("Branch Map") }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Branches", subtitle = "Normal / Satellite / Hybrid") }
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -680,7 +734,9 @@ fun BranchMapScreen(vetCareViewModel: VetCareViewModel) {
             }
             item {
                 GoogleMap(
-                    modifier = Modifier.fillMaxWidth().height(400.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp),
                     cameraPositionState = cameraPositionState,
                     properties = MapProperties(
                         mapType = when (mapMode) {
@@ -708,7 +764,9 @@ fun BranchMapScreen(vetCareViewModel: VetCareViewModel) {
             }
             item {
                 branches.forEach { branch ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(branch.name, fontWeight = FontWeight.Bold)
                             Text(branch.address)
@@ -740,7 +798,10 @@ fun VaccinationControlScreen(vetCareViewModel: VetCareViewModel) {
     var notes by remember { mutableStateOf("") }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Vaccination Control") }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Vaccines", subtitle = "Green = up to date • Amber = expiring • Red = overdue") }
             item {
                 VetCareExposedDropdown(
@@ -773,17 +834,25 @@ fun VaccinationControlScreen(vetCareViewModel: VetCareViewModel) {
             }
             item {
                 vaccines.sortedByDescending { it.nextDoseDate }.forEach { record ->
+                    val pet = pets.firstOrNull { it.id == record.petId }
                     val status = record.status()
                     val color = when (status) {
                         VaccinationStatus.UP_TO_DATE -> Color(0xFF2E7D32) // Success Green
                         VaccinationStatus.EXPIRING -> Color(0xFFF9A825)   // Warning Amber
                         VaccinationStatus.OVERDUE -> Color(0xFFE64A19)    // Accent Red
                     }
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(record.vaccineName, fontWeight = FontWeight.Bold)
-                                Box(modifier = Modifier.size(16.dp).background(color, RoundedCornerShape(999.dp)))
+                                Column {
+                                    Text("Pet: ${pet?.name ?: "Unknown"}", fontWeight = FontWeight.Bold)
+                                    Text(record.vaccineName)
+                                }
+                                Box(modifier = Modifier
+                                    .size(16.dp)
+                                    .background(color, RoundedCornerShape(999.dp)))
                             }
                             Text("${record.laboratory} • ${record.lot}")
                             Text("Next dose: ${record.nextDoseDate}")
@@ -804,7 +873,10 @@ fun MultimediaCatalogScreen(vetCareViewModel: VetCareViewModel) {
     LaunchedEffect(category) { vetCareViewModel.setMediaCategory(category) }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Multimedia Catalog") }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Media library", subtitle = "Image gallery and video player") }
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -816,14 +888,18 @@ fun MultimediaCatalogScreen(vetCareViewModel: VetCareViewModel) {
             }
             item {
                 items.forEach { media ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(media.title, fontWeight = FontWeight.Bold)
                             Text(media.description)
                             if (media.mediaType == com.example.vetcarepro.domain.model.MediaType.VIDEO) {
                                 Text("Video: ${media.mediaUrl}")
                             } else {
-                                AsyncImage(model = media.thumbnailUrl.ifBlank { media.mediaUrl }, contentDescription = null, modifier = Modifier.fillMaxWidth().height(180.dp))
+                                AsyncImage(model = media.thumbnailUrl.ifBlank { media.mediaUrl }, contentDescription = null, modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp))
                             }
                         }
                     }
@@ -840,12 +916,17 @@ fun OfflineInformationScreen(vetCareViewModel: VetCareViewModel) {
     val guides = vetCareViewModel.guidesByQuery(query)
 
     Scaffold(topBar = { TopAppBar(title = { Text("Offline Information") }) }) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { ScreenHeader(title = "Offline guides", subtitle = "Local JSON + cached images") }
             item { VetCareTextField(query, { query = it }, "Search guides") }
             item {
                 guides.forEach { guide ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(guide.title, fontWeight = FontWeight.Bold)
                             Text(guide.category)

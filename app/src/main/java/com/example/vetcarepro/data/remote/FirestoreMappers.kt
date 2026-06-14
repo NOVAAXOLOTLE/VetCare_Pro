@@ -16,6 +16,7 @@ import com.example.vetcarepro.domain.model.ServiceItem
 import com.example.vetcarepro.domain.model.UserRole
 import com.example.vetcarepro.domain.model.VaccineRecord
 import com.google.firebase.Timestamp
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -148,6 +149,15 @@ fun Map<String, Any?>.toAppUser(): AppUser = AppUser(
     active = this["active"] as? Boolean ?: true
 )
 
+fun Map<String, Any?>.toOwner(): Owner = Owner(
+    id = this["id"] as? String ?: "",
+    fullName = this["fullName"] as? String ?: "",
+    email = this["email"] as? String ?: "",
+    phone = this["phone"] as? String ?: "",
+    address = this["address"] as? String ?: "",
+    documentId = this["documentId"] as? String ?: ""
+)
+
 fun Map<String, Any?>.toPet(): Pet = Pet(
     id = this["id"] as? String ?: "",
     name = this["name"] as? String ?: "",
@@ -247,13 +257,13 @@ fun Map<String, Any?>.toAppNotification(): AppNotification = AppNotification(
 )
 
 private fun epochToLocalDate(value: Any?): LocalDate = when (value) {
-    is Number -> Timestamp(value.toLong(), 0).toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+    is Number -> Instant.ofEpochMilli(value.toLong()).atZone(ZoneId.systemDefault()).toLocalDate()
     is Timestamp -> value.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
     else -> LocalDate.now()
 }
 
 private fun epochToLocalDateTime(value: Any?): LocalDateTime = when (value) {
-    is Number -> Timestamp(value.toLong(), 0).toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+    is Number -> Instant.ofEpochMilli(value.toLong()).atZone(ZoneId.systemDefault()).toLocalDateTime()
     is Timestamp -> value.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
     else -> LocalDateTime.now()
 }
